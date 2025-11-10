@@ -1,0 +1,135 @@
+import { sql } from "drizzle-orm";
+import { pgTable, text, varchar, timestamp, jsonb, index, integer } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+// Session storage table for Replit Auth
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// User storage table for standalone auth
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").unique().notNull(),
+  password: varchar("password").notNull(),
+  username: varchar("username"),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  emailVerified: varchar("email_verified").notNull().default("false"),
+  emailVerificationToken: varchar("email_verification_token"),
+  credits: integer("credits").notNull().default(0),
+  selectedAiModel: varchar("selected_ai_model").notNull().default("free"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const notebooks = pgTable("notebooks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  emoji: text("emoji").notNull().default("📝"),
+  documentType: text("document_type"),
+  aiMemory: jsonb("ai_memory").default({}),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const sections = pgTable("sections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  notebookId: varchar("notebook_id").notNull().references(() => notebooks.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  content: text("content").notNull().default(""),
+  orderIndex: text("order_index").notNull(),
+});
+
+export const messages = pgTable("messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  notebookId: varchar("notebook_id").notNull().references(() => notebooks.id, { onDelete: "cascade" }),
+  role: varchar("role").notNull(), // "user", "assistant", or "system"
+  content: text("content").notNull(),
+  messageType: varchar("message_type"), // "status" (yellow, collapsible) or "completion" (green, always visible)
+  sectionTitle: text("section_title"), // For section completion messages
+  isExpandable: varchar("is_expandable"), // "true" or null - for section completion messages
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const sectionVersions = pgTable("section_versions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sectionId: varchar("section_id").notNull().references(() => sections.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const transactions = pgTable("transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: varchar("type").notNull(), // "purchase" | "deduction"
+  amount: integer("amount").notNull(),
+  stripePaymentId: varchar("stripe_payment_id"),
+  description: text("description").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertNotebookSchema = createInsertSchema(notebooks).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSectionSchema = createInsertSchema(sections).omit({
+  id: true,
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Gmail validation function
+const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/i;
+
+export const gmailSchema = z.string()
+  .email("Please enter a valid email address")
+  .refine((email) => gmailRegex.test(email), {
+    message: "Please use a Gmail address (@gmail.com)",
+  })
+  .transform((email) => email.toLowerCase().trim());
+
+// User schemas for authentication
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  email: gmailSchema,
+  username: z.string().optional().nullable(),
+  firstName: z.string().optional().nullable(),
+  lastName: z.string().optional().nullable(),
+  profileImageUrl: z.string().optional().nullable(),
+});
+
+export const insertTransactionSchema = createInsertSchema(transactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+export type InsertNotebook = z.infer<typeof insertNotebookSchema>;
+export type Notebook = typeof notebooks.$inferSelect;
+export type InsertSection = z.infer<typeof insertSectionSchema>;
+export type Section = typeof sections.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type Message = typeof messages.$inferSelect;
+export type SectionVersion = typeof sectionVersions.$inferSelect;
+export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
+export type Transaction = typeof transactions.$inferSelect;
