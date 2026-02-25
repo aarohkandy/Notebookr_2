@@ -1,84 +1,32 @@
-# Setup Instructions for Notebookr_2
+# Setup Instructions
 
-## Quick Setup
+This file is a quick setup reference.
+For full details, see `README.md`.
 
-All files have been downloaded. To complete the setup and start working:
-
-### Step 1: Install Required Tools
-
-You need to install `git` and `Node.js` first. Run these commands:
+## Fast path
 
 ```bash
-sudo apt update
-sudo apt install -y git nodejs npm
-```
-
-### Step 2: Run the Setup Script
-
-Once git and Node.js are installed, run:
-
-```bash
-cd /home/aaroh/Notebookr_2
-./setup.sh
-```
-
-This will:
-- ✅ Initialize the git repository
-- ✅ Set up the GitHub remote
-- ✅ Install all project dependencies
-- ✅ Create an initial commit
-
-### Step 3: Test the Project
-
-After setup completes, you can test it:
-
-```bash
+npm install
+npm run setup:env
+npm run env:check
+npm run db:push
 npm run dev
 ```
 
-This will start the development server.
+## Required `.env` values
 
-## Working with Git
+- `DATABASE_URL`
+- `SESSION_SECRET`
+- `JWT_SECRET`
+- at least one AI key:
+  - `OPENROUTER_KEY1`, or
+  - `AI_INTEGRATIONS_OPENAI_API_KEY`
 
-### Making Changes and Pushing to GitHub
-
-1. **Make your changes** to the code
-2. **Stage your changes:**
-   ```bash
-   git add .
-   ```
-3. **Commit your changes:**
-   ```bash
-   git commit -m "Description of your changes"
-   ```
-4. **Push to GitHub:**
-   ```bash
-   git push origin main
-   ```
-
-### Pulling Latest Changes from GitHub
+## One-command bootstrap
 
 ```bash
-git pull origin main
+./setup.sh
 ```
 
-## Project Structure
-
-- `client/` - React frontend application
-- `server/` - Express backend server
-- `api/` - API route handlers
-- `shared/` - Shared TypeScript types and schemas
-
-## Available Scripts
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run check` - Type check TypeScript
-- `npm run db:push` - Push database schema changes
-
-## Notes
-
-- The git repository is already configured with the remote: `https://github.com/idkwhatitshouldbeman/Notebookr_2.git`
-- All files from GitHub have been copied to this directory
-- You may need to set up environment variables (see `.env.example`)
+This will install dependencies, create `.env` if missing, and run validation.
 
