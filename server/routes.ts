@@ -210,14 +210,24 @@ export function registerRoutes(app: Express): Server {
       const { threePhaseGenerationStream } = await import("./ai-service");
 
       // Start streaming generation
+      let finalAiMemory: any = null;
       for await (const event of threePhaseGenerationStream({
         instruction,
         sections,
         aiMemory: aiMemory || notebook.aiMemory,
         notebookId
       })) {
+        // Capture the updated AI memory so it can be persisted after streaming
+        if (event.type === "complete" && event.result?.aiMemory) {
+          finalAiMemory = event.result.aiMemory;
+        }
         // Send event to client
         res.write(`data: ${JSON.stringify(event)}\n\n`);
+      }
+
+      // Persist the updated AI memory so the plan/variables survive page reloads
+      if (finalAiMemory) {
+        await storage.updateNotebookAiMemory(notebookId, finalAiMemory);
       }
 
       // Close the stream

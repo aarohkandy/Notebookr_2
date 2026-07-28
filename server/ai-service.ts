@@ -577,14 +577,18 @@ If hasQuestions is false, questions must be empty array [] and you MUST populate
 
   // Handle awaiting answers phase
   if (aiMemory.currentPhase === "awaiting_answers") {
-    const { allQuestions, answers, questionIndex } = aiMemory;
-    
+    const { allQuestions, questionIndex } = aiMemory;
+
+    // Record the user's answer to the current question (arrives as `instruction`)
+    const answers = [...(aiMemory.answers || []), instruction];
+
     // If we have more questions to ask
     if (questionIndex + 1 < allQuestions.length) {
       console.log(`❓ Asking question ${questionIndex + 2}/${allQuestions.length}`);
-      const updatedMemory = { 
+      const updatedMemory = {
         ...aiMemory,
-        questionIndex: questionIndex + 1
+        questionIndex: questionIndex + 1,
+        answers
       };
       
       return {
